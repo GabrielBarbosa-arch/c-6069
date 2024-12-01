@@ -119,10 +119,13 @@ const AssetDetail = () => {
                 />
                 <YAxis
                   domain={["auto", "auto"]}
-                  tickFormatter={(num) => `$${num.toFixed(2)}`}
+                  tickFormatter={(num) => `$${Number(num).toFixed(2)}`}
                 />
                 <Tooltip
-                  formatter={(value: number) => [`$${value.toFixed(2)}`, "Price"]}
+                  formatter={(value: any) => {
+                    const numValue = Number(value);
+                    return isNaN(numValue) ? ["Invalid", "Price"] : [`$${numValue.toFixed(2)}`, "Price"];
+                  }}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
                 <Line
