@@ -1,15 +1,24 @@
 import { useQuery } from "@tanstack/react-query";
-import { getAssets } from "@/services/api";
+import { getAssets, getBrlRate } from "@/services/api";
 import { useNavigate } from "react-router-dom";
 import { ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Switch } from "@/components/ui/switch";
+import { useState } from "react";
 
 const Index = () => {
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [showBrl, setShowBrl] = useState(false);
+
   const { data: assets, isLoading } = useQuery({
     queryKey: ["assets"],
     queryFn: () => getAssets(),
+  });
+
+  const { data: brlRate } = useQuery({
+    queryKey: ["brlRate"],
+    queryFn: () => getBrlRate(),
   });
 
   if (isLoading) {
@@ -22,9 +31,27 @@ const Index = () => {
     );
   }
 
+  const formatCurrency = (value: number) => {
+    if (showBrl && brlRate) {
+      return `R$ ${(value * brlRate).toFixed(2)}`;
+    }
+    return `$${value.toFixed(2)}`;
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-brutal-white">
-      <h1 className="text-4xl md:text-6xl font-bold mb-4 md:mb-8">Crypto Assets</h1>
+      <div className="flex justify-between items-center mb-4 md:mb-8">
+        <h1 className="text-4xl md:text-6xl font-bold">Crypto Assets</h1>
+        <div className="flex items-center gap-2">
+          <span>USD</span>
+          <Switch
+            checked={showBrl}
+            onCheckedChange={setShowBrl}
+          />
+          <span>BRL</span>
+        </div>
+      </div>
+      
       <div className="overflow-x-auto -mx-4 md:mx-0">
         <div className="min-w-[800px] md:min-w-0 px-4 md:px-0">
           <table className="w-full brutal-border brutal-shadow bg-brutal-white">
@@ -32,7 +59,7 @@ const Index = () => {
               <tr className="border-b-4 border-brutal-black">
                 <th className="p-3 md:p-4 text-left">Rank</th>
                 <th className="p-3 md:p-4 text-left">Name</th>
-                <th className="p-3 md:p-4 text-right">Price USD</th>
+                <th className="p-3 md:p-4 text-right">Price</th>
                 {!isMobile && <th className="p-3 md:p-4 text-right">Market Cap</th>}
                 <th className="p-3 md:p-4 text-right">24h</th>
               </tr>
@@ -52,11 +79,11 @@ const Index = () => {
                     </div>
                   </td>
                   <td className="p-3 md:p-4 text-right">
-                    ${Number(asset.priceUsd).toFixed(2)}
+                    {formatCurrency(Number(asset.priceUsd))}
                   </td>
                   {!isMobile && (
                     <td className="p-3 md:p-4 text-right">
-                      ${Number(asset.marketCapUsd / 1000000).toFixed(0)}M
+                      {formatCurrency(Number(asset.marketCapUsd / 1000000))}M
                     </td>
                   )}
                   <td className="p-3 md:p-4 text-right">

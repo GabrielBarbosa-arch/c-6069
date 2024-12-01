@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useNavigate, useParams } from "react-router-dom";
-import { getAssetDetails, getAssetHistory } from "@/services/api";
+import { getAssetDetails, getAssetHistory, getBrlRate } from "@/services/api";
 import { ArrowLeft, ArrowUpIcon, ArrowDownIcon } from "lucide-react";
 import {
   LineChart,
@@ -11,11 +11,14 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { Switch } from "@/components/ui/switch";
+import { useState } from "react";
 
 const AssetDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const isMobile = useIsMobile();
+  const [showBrl, setShowBrl] = useState(false);
 
   const { data: asset } = useQuery({
     queryKey: ["asset", id],
@@ -25,6 +28,11 @@ const AssetDetail = () => {
   const { data: history } = useQuery({
     queryKey: ["history", id],
     queryFn: () => getAssetHistory(id!),
+  });
+
+  const { data: brlRate } = useQuery({
+    queryKey: ["brlRate"],
+    queryFn: () => getBrlRate(),
   });
 
   if (!asset) {
@@ -37,15 +45,32 @@ const AssetDetail = () => {
     );
   }
 
+  const formatCurrency = (value: number) => {
+    if (showBrl && brlRate) {
+      return `R$ ${(value * brlRate).toFixed(2)}`;
+    }
+    return `$${value.toFixed(2)}`;
+  };
+
   return (
     <div className="min-h-screen p-4 md:p-8 bg-brutal-white">
-      <button
-        onClick={() => navigate("/")}
-        className="brutal-border brutal-shadow bg-brutal-white px-3 py-1.5 md:px-4 md:py-2 mb-4 md:mb-8 flex items-center gap-2 brutal-hover"
-      >
-        <ArrowLeft size={20} />
-        Back
-      </button>
+      <div className="flex justify-between items-center mb-4">
+        <button
+          onClick={() => navigate("/")}
+          className="brutal-border brutal-shadow bg-brutal-white px-3 py-1.5 md:px-4 md:py-2 flex items-center gap-2 brutal-hover"
+        >
+          <ArrowLeft size={20} />
+          Back
+        </button>
+        <div className="flex items-center gap-2">
+          <span>USD</span>
+          <Switch
+            checked={showBrl}
+            onCheckedChange={setShowBrl}
+          />
+          <span>BRL</span>
+        </div>
+      </div>
 
       <div className="grid grid-cols-1 gap-4 md:gap-8">
         <div className="brutal-border brutal-shadow bg-brutal-white p-4 md:p-8">
@@ -54,7 +79,7 @@ const AssetDetail = () => {
               {asset.name} ({asset.symbol})
             </h1>
             <span className="text-xl md:text-2xl font-bold">
-              ${Number(asset.priceUsd).toFixed(2)}
+              {formatCurrency(Number(asset.priceUsd))}
             </span>
           </div>
 
@@ -77,13 +102,13 @@ const AssetDetail = () => {
             <div className="brutal-border p-2 md:p-4">
               <div className="text-xs md:text-sm text-gray-600">Market Cap</div>
               <div className="font-bold text-sm md:text-base">
-                ${Number(asset.marketCapUsd / 1000000).toFixed(0)}M
+                {formatCurrency(Number(asset.marketCapUsd / 1000000))}M
               </div>
             </div>
             <div className="brutal-border p-2 md:p-4">
               <div className="text-xs md:text-sm text-gray-600">Volume (24h)</div>
               <div className="font-bold text-sm md:text-base">
-                ${Number(asset.volumeUsd24Hr / 1000000).toFixed(0)}M
+                {formatCurrency(Number(asset.volumeUsd24Hr / 1000000))}M
               </div>
             </div>
             <div className="brutal-border p-2 md:p-4">
@@ -119,12 +144,17 @@ const AssetDetail = () => {
                 />
                 <YAxis
                   domain={["auto", "auto"]}
-                  tickFormatter={(num) => `$${Number(num).toFixed(2)}`}
+                  tickFormatter={(num) => {
+                    const value = showBrl && brlRate ? num * brlRate : num;
+                    return `${showBrl ? 'R$' : '$'}${Number(value).toFixed(2)}`;
+                  }}
                 />
                 <Tooltip
                   formatter={(value: any) => {
                     const numValue = Number(value);
-                    return isNaN(numValue) ? ["Invalid", "Price"] : [`$${numValue.toFixed(2)}`, "Price"];
+                    if (isNaN(numValue)) return ["Invalid", "Price"];
+                    const convertedValue = showBrl && brlRate ? numValue * brlRate : numValue;
+                    return [`${showBrl ? 'R$' : '$'}${convertedValue.toFixed(2)}`, "Price"];
                   }}
                   labelFormatter={(label) => new Date(label).toLocaleDateString()}
                 />
